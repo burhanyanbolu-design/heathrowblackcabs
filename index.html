@@ -369,7 +369,7 @@ footer a:hover{color:var(--red)}
       <div class="price-breakdown" id="price-breakdown" style="font-size:12px;color:#ccc;margin-top:8px"></div>
     </div>
 
-    <button class="btn-book" onclick="submitBooking()">&#128663; Book Now &amp; Confirm via WhatsApp</button>
+    <button class="btn-book" onclick="submitBooking()">&#128663; Book Now</button>
 
     <div class="payment-options">
       <div class="payment-badge">&#128179; Cash</div>
@@ -379,6 +379,17 @@ footer a:hover{color:var(--red)}
     </div>
 
     <div id="booking-response" style="margin-top:16px;padding:12px;border-radius:6px;display:none;font-size:13px"></div>
+    
+    <!-- Stripe Payment Modal -->
+    <div id="stripe-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;padding:40px;max-width:500px;width:90%;position:relative">
+        <button onclick="closeStripeModal()" style="position:absolute;top:15px;right:15px;background:none;border:none;font-size:24px;cursor:pointer;color:#666">&times;</button>
+        <h3 style="color:#111;margin-bottom:20px;text-align:center">Complete Payment</h3>
+        <div id="stripe-payment-element" style="margin-bottom:20px"></div>
+        <button id="stripe-submit-btn" onclick="handleStripePayment()" class="btn-book" style="margin-top:0">Pay £<span id="stripe-amount">0.00</span></button>
+        <div id="stripe-error" style="color:#f85149;margin-top:12px;font-size:13px;display:none"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -634,6 +645,12 @@ footer a:hover{color:var(--red)}
 <a href="https://wa.me/447740304061" class="whatsapp-float" title="WhatsApp Bob">&#128172;</a>
 
 <script>
+// Stripe setup
+const stripe = Stripe('pk_live_51TSSNbKf9iPJa4sIPR1gq47JdYb1rQCoJ8lyMMJzI0Qxo1Vy7vSJzsy8Ak7DmbEOPVbfG3YOS0NQtQHbugxBcByw00PSSiIwe0');
+let stripeElements;
+let stripePaymentElement;
+let currentBookingData = null;
+
 // Set minimum date to today
 document.getElementById("journey-date").min = new Date().toISOString().split("T")[0];
 
@@ -826,41 +843,153 @@ async function submitBooking() {
   const isAirport = journeyType !== "point-to-point";
   const price = calculatePrice(miles, isAirport, isPickup);
 
+  // Store booking data
+  currentBookingData = {
+    name, phone, pickup, dropoff, date, time, passengers, payment,
+    airport, flight, journeyType, specialRequests, specialNotes, price
+  };
+
+  // If online payment selected, show Stripe modal
+  if (payment === "online") {
+    await showStripePayment(price);
+    return;
+  }
+
+  // Otherwise, send via WhatsApp
+  sendWhatsAppBooking(currentBookingData);
+}
+
+function sendWhatsAppBooking(data) {
+  const responseDiv = document.getElementById("booking-response");
+  
   // Build WhatsApp message
   let msg = "NEW BOOKING REQUEST\n" +
-    "Name: " + name + "\n" +
-    "Phone: " + phone + "\n" +
-    "Pickup: " + pickup + "\n" +
-    "Drop-off: " + dropoff + "\n" +
-    "Date: " + date + "\n" +
-    "Time: " + time + "\n" +
-    "Passengers: " + passengers + "\n" +
-    "Journey: " + journeyType + "\n" +
-    (airport ? "Airport: " + airport + "\n" : "") +
-    (flight ? "Flight: " + flight + "\n" : "") +
-    "Payment: " + payment + "\n";
+    "Name: " + data.name + "\n" +
+    "Phone: " + data.phone + "\n" +
+    "Pickup: " + data.pickup + "\n" +
+    "Drop-off: " + data.dropoff + "\n" +
+    "Date: " + data.date + "\n" +
+    "Time: " + data.time + "\n" +
+    "Passengers: " + data.passengers + "\n" +
+    "Journey: " + data.journeyType + "\n" +
+    (data.airport ? "Airport: " + data.airport + "\n" : "") +
+    (data.flight ? "Flight: " + data.flight + "\n" : "") +
+    "Payment: " + data.payment + "\n";
   
-  if (specialRequests) {
-    msg += "Special Requests: " + specialRequests + "\n";
+  if (data.specialRequests) {
+    msg += "Special Requests: " + data.specialRequests + "\n";
   }
-  if (specialNotes) {
-    msg += "Notes: " + specialNotes + "\n";
+  if (data.specialNotes) {
+    msg += "Notes: " + data.specialNotes + "\n";
   }
   
-  msg += "Est. Price: £" + price.toFixed(2);
+  msg += "Est. Price: £" + data.price.toFixed(2);
 
   responseDiv.style.display = "block";
   responseDiv.style.background = "#f0fff4";
   responseDiv.style.border = "1px solid #3fb950";
   responseDiv.style.color = "#1a7a3a";
   responseDiv.innerHTML = "&#9989; Booking request ready! Sending to Bob via WhatsApp...<br><br>" +
-    "<strong>Estimated Price: £" + price.toFixed(2) + "</strong><br>" +
+    "<strong>Estimated Price: £" + data.price.toFixed(2) + "</strong><br>" +
     "Bob will confirm your booking within minutes.";
 
   // Open WhatsApp
   setTimeout(() => {
     window.open("https://wa.me/447740304061?text=" + encodeURIComponent(msg), "_blank");
   }, 1000);
+}
+
+async function showStripePayment(amount) {
+  try {
+    // Create payment intent on backend
+    const response = await fetch('/book/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: 'gbp'
+      })
+    });
+
+    const { clientSecret } = await response.json();
+
+    // Show modal
+    document.getElementById("stripe-modal").style.display = "flex";
+    document.getElementById("stripe-amount").textContent = amount.toFixed(2);
+
+    // Initialize Stripe Elements
+    stripeElements = stripe.elements({ clientSecret });
+    stripePaymentElement = stripeElements.create('payment');
+    stripePaymentElement.mount('#stripe-payment-element');
+
+  } catch (error) {
+    alert("Failed to initialize payment: " + error.message);
+  }
+}
+
+function closeStripeModal() {
+  document.getElementById("stripe-modal").style.display = "none";
+  if (stripePaymentElement) {
+    stripePaymentElement.unmount();
+  }
+}
+
+async function handleStripePayment() {
+  const submitBtn = document.getElementById("stripe-submit-btn");
+  const errorDiv = document.getElementById("stripe-error");
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Processing...";
+  errorDiv.style.display = "none";
+
+  try {
+    const { error } = await stripe.confirmPayment({
+      elements: stripeElements,
+      confirmParams: {
+        return_url: window.location.origin + '/payment-success.html',
+      },
+      redirect: 'if_required'
+    });
+
+    if (error) {
+      errorDiv.textContent = error.message;
+      errorDiv.style.display = "block";
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Pay £<span id="stripe-amount">' + currentBookingData.price.toFixed(2) + '</span>';
+    } else {
+      // Payment successful, send booking to backend
+      await sendBookingToBackend(currentBookingData);
+      closeStripeModal();
+      
+      const responseDiv = document.getElementById("booking-response");
+      responseDiv.style.display = "block";
+      responseDiv.style.background = "#f0fff4";
+      responseDiv.style.border = "1px solid #3fb950";
+      responseDiv.style.color = "#1a7a3a";
+      responseDiv.innerHTML = "&#9989; Payment successful! Booking confirmed.<br><br>" +
+        "<strong>Paid: £" + currentBookingData.price.toFixed(2) + "</strong><br>" +
+        "You will receive a confirmation email shortly.";
+    }
+  } catch (err) {
+    errorDiv.textContent = "Payment failed: " + err.message;
+    errorDiv.style.display = "block";
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'Pay £<span id="stripe-amount">' + currentBookingData.price.toFixed(2) + '</span>';
+  }
+}
+
+async function sendBookingToBackend(data) {
+  try {
+    const response = await fetch('/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    console.log("Booking sent:", result);
+  } catch (error) {
+    console.error("Failed to send booking:", error);
+  }
 }
 </script>
 </body>

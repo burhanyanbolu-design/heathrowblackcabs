@@ -4,6 +4,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
+import stripe
 
 app = Flask(__name__)
 CORS(app)
@@ -12,6 +13,9 @@ CORS(app)
 IONOS_USER = os.environ.get('IONOS_USER', 'info@heathrowblackcabs.co.uk')
 IONOS_PASS = os.environ.get('IONOS_PASS', 'Yanbolu1973@')
 BUSINESS_EMAIL = 'info@heathrowblackcabs.co.uk'
+
+# Stripe configuration
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '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')
 
 def send_email(to, subject, html_body):
     try:
@@ -40,6 +44,33 @@ def send_email(to, subject, html_body):
     except Exception as e:
         print(f"Failed to send email to {to}: {str(e)}")
         raise
+
+@app.route('/create-payment-intent', methods=['POST'])
+def create_payment_intent():
+    try:
+        data = request.json
+        amount = data.get('amount')  # Amount in cents
+        currency = data.get('currency', 'gbp')
+        
+        # Create a PaymentIntent with the order amount and currency
+        intent = stripe.PaymentIntent.create(
+            amount=amount,
+            currency=currency,
+            automatic_payment_methods={'enabled': True},
+            metadata={
+                'service': 'Heathrow Black Cabs',
+                'business_email': BUSINESS_EMAIL
+            }
+        )
+        
+        print(f"Payment intent created: {intent.id} for £{amount/100}")
+        
+        return jsonify({
+            'clientSecret': intent.client_secret
+        })
+    except Exception as e:
+        print(f"Payment intent error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/book', methods=['POST'])
 def book():
