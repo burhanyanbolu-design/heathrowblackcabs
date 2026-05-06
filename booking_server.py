@@ -45,7 +45,8 @@ def book():
               <tr><td style="padding:10px 0;border-bottom:1px solid #222;color:#888;font-size:13px">Passengers</td><td style="padding:10px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-align:right">{b.get('passengers')}</td></tr>
               {'<tr><td style="padding:10px 0;border-bottom:1px solid #222;color:#888;font-size:13px">Flight</td><td style="padding:10px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-align:right">' + b.get('flight','') + '</td></tr>' if b.get('flight') else ''}
               <tr><td style="padding:10px 0;border-bottom:1px solid #222;color:#888;font-size:13px">Payment</td><td style="padding:10px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-align:right">{b.get('payment')}</td></tr>
-              {'<tr><td style="padding:10px 0;border-bottom:1px solid #222;color:#888;font-size:13px">Extras</td><td style="padding:10px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-align:right">' + b.get('specials','') + '</td></tr>' if b.get('specials') else ''}
+              {'<tr><td style="padding:10px 0;border-bottom:1px solid #222;color:#888;font-size:13px">Special Requests</td><td style="padding:10px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-align:right">' + b.get('specialRequests','') + '</td></tr>' if b.get('specialRequests') else ''}
+              {'<tr><td style="padding:10px 0;border-bottom:1px solid #222;color:#888;font-size:13px">Notes</td><td style="padding:10px 0;border-bottom:1px solid #222;color:#fff;font-size:13px;text-align:right">' + b.get('notes','') + '</td></tr>' if b.get('notes') else ''}
               <tr><td style="padding:10px 0;color:#888;font-size:13px">Est. Price</td><td style="padding:10px 0;color:#c9a84c;font-size:20px;font-weight:bold;text-align:right">£{b.get('price')}</td></tr>
             </table>
           </div>
@@ -71,7 +72,7 @@ def book():
             <tr><td style="padding:8px 0;color:#888;font-size:13px">Passengers</td><td style="padding:8px 0;color:#fff;font-size:13px">{b.get('passengers')}</td></tr>
             {'<tr><td style="padding:8px 0;color:#888;font-size:13px">Flight</td><td style="padding:8px 0;color:#fff;font-size:13px">' + b.get('flight','') + '</td></tr>' if b.get('flight') else ''}
             <tr><td style="padding:8px 0;color:#888;font-size:13px">Payment</td><td style="padding:8px 0;color:#fff;font-size:13px">{b.get('payment')}</td></tr>
-            {'<tr><td style="padding:8px 0;color:#888;font-size:13px">Extras</td><td style="padding:8px 0;color:#fff;font-size:13px">' + b.get('specials','') + '</td></tr>' if b.get('specials') else ''}
+            {'<tr><td style="padding:8px 0;color:#888;font-size:13px">Special Requests</td><td style="padding:8px 0;color:#fff;font-size:13px">' + b.get('specialRequests','') + '</td></tr>' if b.get('specialRequests') else ''}
             {'<tr><td style="padding:8px 0;color:#888;font-size:13px">Notes</td><td style="padding:8px 0;color:#fff;font-size:13px">' + b.get('notes','') + '</td></tr>' if b.get('notes') else ''}
             <tr><td style="padding:8px 0;color:#888;font-size:13px">Est. Price</td><td style="padding:8px 0;color:#c9a84c;font-size:20px;font-weight:bold">£{b.get('price')}</td></tr>
           </table>
