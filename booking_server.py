@@ -9,19 +9,19 @@ app = Flask(__name__)
 CORS(app)
 
 # --- CONFIG ---
-GMAIL_USER = os.environ.get('GMAIL_USER', 'YOUR_GMAIL@gmail.com')
-GMAIL_PASS = os.environ.get('GMAIL_PASS', 'YOUR_APP_PASSWORD')
+IONOS_USER = os.environ.get('IONOS_USER', 'info@heathrowblackcabs.co.uk')
+IONOS_PASS = os.environ.get('IONOS_PASS', 'Yanbolu1973@')
 BUSINESS_EMAIL = 'info@heathrowblackcabs.co.uk'
 
 def send_email(to, subject, html_body):
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
-    msg['From'] = GMAIL_USER
+    msg['From'] = IONOS_USER
     msg['To'] = to
     msg.attach(MIMEText(html_body, 'html'))
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login(GMAIL_USER, GMAIL_PASS)
-        server.sendmail(GMAIL_USER, to, msg.as_string())
+    with smtplib.SMTP_SSL('smtp.ionos.co.uk', 465) as server:
+        server.login(IONOS_USER, IONOS_PASS)
+        server.sendmail(IONOS_USER, to, msg.as_string())
 
 @app.route('/book', methods=['POST'])
 def book():
