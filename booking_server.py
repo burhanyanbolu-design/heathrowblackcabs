@@ -15,7 +15,7 @@ IONOS_PASS = os.environ.get('IONOS_PASS', 'Yanbolu1973@')
 BUSINESS_EMAIL = 'info@heathrowblackcabs.co.uk'
 
 # Stripe configuration
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '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')
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')  # Set via environment variable
 
 def send_email(to, subject, html_body):
     try:
