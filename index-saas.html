@@ -295,6 +295,12 @@ footer a:hover{color:#fff}
         <input type="tel" id="customer-phone" placeholder="Your phone number" />
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>&#128231; Email Address</label>
+        <input type="email" id="customer-email" placeholder="your@email.com — confirmation sent here" />
+      </div>
+    </div>
 
     <div class="form-row">
       <div class="form-group">
@@ -337,19 +343,10 @@ footer a:hover{color:#fff}
     </div>
 
     <div style="margin-top:20px;display:flex;flex-direction:column;gap:12px">
-      <!-- Primary: WhatsApp -->
-      <a id="whatsapp-btn" href="https://wa.me/447740304061" target="_blank" style="display:block;background:#25d366;color:#fff;padding:16px;border-radius:8px;text-align:center;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.5px" onclick="buildMessage()">
-        &#128172; Book via WhatsApp
-      </a>
-      <!-- Secondary: Stripe -->
-      <button onclick="stripeCheckout()" style="background:var(--gold);color:#000;padding:16px;border-radius:8px;font-weight:700;font-size:15px;border:none;cursor:pointer;letter-spacing:0.5px;width:100%">
-        &#128179; Pay Online with Stripe
+      <button onclick="confirmBooking()" style="background:var(--gold);color:#000;padding:18px;border-radius:8px;font-weight:800;font-size:16px;border:none;cursor:pointer;letter-spacing:1px;width:100%;text-transform:uppercase">
+        &#128663; Confirm Booking
       </button>
-      <!-- Tertiary: Email -->
-      <button onclick="emailBooking()" style="background:#1a1a1a;color:#fff;padding:16px;border-radius:8px;font-weight:700;font-size:15px;border:1px solid #444;cursor:pointer;letter-spacing:0.5px;width:100%">
-        &#128231; Book via Email
-      </button>
-      <p style="text-align:center;color:#555;font-size:12px;margin-top:4px">We confirm every booking within minutes &middot; 24/7</p>
+      <p style="text-align:center;color:#555;font-size:12px;margin-top:4px">Confirmation sent to your email instantly &middot; 24/7 service</p>
     </div>
 
     <div class="payment-badges">
@@ -555,6 +552,7 @@ function getBookingDetails() {
   return {
     name: document.getElementById('customer-name').value.trim(),
     phone: document.getElementById('customer-phone').value.trim(),
+    email: document.getElementById('customer-email').value.trim(),
     pickup: document.getElementById('pickup').value,
     dropoff: document.getElementById('dropoff').value,
     date: document.getElementById('journey-date').value,
@@ -571,82 +569,50 @@ function getBookingDetails() {
 function validateForm() {
   const b = getBookingDetails();
   const r = document.getElementById('booking-response');
-  if (!b.name || !b.phone || !b.pickup || !b.dropoff || !b.date || !b.time) {
+  if (!b.name || !b.phone || !b.email || !b.pickup || !b.dropoff || !b.date || !b.time) {
     r.style.display='block';r.style.background='#1a0000';
     r.style.border='1px solid #c9a84c';r.style.color='#c9a84c';
     r.style.padding='12px';r.style.borderRadius='8px';
-    r.textContent='Please fill in all required fields (name, phone, pickup, drop-off, date, time).';
+    r.textContent='Please fill in all required fields including your email address.';
     return false;
   }
   return true;
 }
 
-function buildMessage() {
-  if (!validateForm()) return false;
-  const b = getBookingDetails();
-  const msg = encodeURIComponent(
-    '🚖 NEW BOOKING — Heathrow Black Cabs\n\n' +
-    '👤 Name: ' + b.name + '\n' +
-    '📞 Phone: ' + b.phone + '\n' +
-    '📍 Pickup: ' + b.pickup + '\n' +
-    '📍 Drop-off: ' + b.dropoff + '\n' +
-    '📅 Date: ' + b.date + ' at ' + b.time + '\n' +
-    '👥 Passengers: ' + b.passengers + '\n' +
-    (b.flight ? '✈ Flight: ' + b.flight + '\n' : '') +
-    '💳 Payment: ' + b.payment + '\n' +
-    (b.specials ? '✨ Extras: ' + b.specials + '\n' : '') +
-    (b.notes ? '📝 Notes: ' + b.notes + '\n' : '') +
-    '\n💰 Est. Price: £' + b.price
-  );
-  document.getElementById('whatsapp-btn').href = 'https://wa.me/447740304061?text=' + msg;
-  return true;
-}
-
-function emailBooking() {
+function confirmBooking() {
   if (!validateForm()) return;
   const b = getBookingDetails();
   const r = document.getElementById('booking-response');
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
   r.style.display='block';r.style.background='#0a1a0a';
-  r.style.border='1px solid #25d366';r.style.color='#25d366';
+  r.style.border='1px solid #c9a84c';r.style.color='#c9a84c';
   r.style.padding='12px';r.style.borderRadius='8px';
-  r.textContent='Sending booking...';
+  r.textContent='Processing your booking...';
 
   fetch('https://heathrowblackcabs.co.uk/book', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b)
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(b)
   })
   .then(res=>res.json())
-  .then(()=>{ r.textContent='✅ Booking sent! Check your email for confirmation.'; })
+  .then(data=>{
+    r.style.background='#0a1a0a';
+    r.style.border='1px solid #25d366';
+    r.style.color='#25d366';
+    r.innerHTML='&#9989; <strong>Booking confirmed!</strong> A confirmation has been sent to <strong>' + b.email + '</strong>. We will be in touch shortly.';
+    btn.textContent='&#128663; Booking Sent!';
+  })
   .catch(()=>{
-    // Fallback to mailto
-    const subject = encodeURIComponent('Black Cab Booking — ' + b.date + ' ' + b.time);
-    const body = encodeURIComponent(
-      'Name: ' + b.name + '\nPhone: ' + b.phone +
-      '\nPickup: ' + b.pickup + '\nDrop-off: ' + b.dropoff +
-      '\nDate: ' + b.date + ' at ' + b.time +
-      '\nPassengers: ' + b.passengers +
-      (b.flight ? '\nFlight: ' + b.flight : '') +
-      '\nPayment: ' + b.payment +
-      (b.specials ? '\nExtras: ' + b.specials : '') +
-      (b.notes ? '\nNotes: ' + b.notes : '') +
-      '\nEst. Price: £' + b.price
-    );
-    window.location.href = 'mailto:info@heathrowblackcabs.co.uk?subject=' + subject + '&body=' + body;
+    r.style.background='#1a0000';
+    r.style.border='1px solid #c9a84c';
+    r.style.color='#c9a84c';
+    r.textContent='Could not send booking. Please call us on 07740304061.';
+    btn.disabled=false;
+    btn.textContent='&#128663; Confirm Booking';
   });
-}
-
-const stripe = Stripe('YOUR_STRIPE_PUBLIC_KEY');
-function stripeCheckout() {
-  if (!validateForm()) return;
-  if (lastPrice === 0) {
-    const r = document.getElementById('booking-response');
-    r.style.display='block';r.style.background='#1a0000';
-    r.style.border='1px solid #c9a84c';r.style.color='#c9a84c';
-    r.style.padding='12px';r.style.borderRadius='8px';
-    r.textContent='Please select pickup and drop-off to get a price.';
-    return;
-  }
-  // Stripe backend not yet configured — fall back to WhatsApp
-  if (buildMessage()) document.getElementById('whatsapp-btn').click();
 }
 
 let map, directionsService, directionsRenderer;

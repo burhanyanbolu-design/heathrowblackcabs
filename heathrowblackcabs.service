@@ -1,0 +1,14 @@
+[Unit]
+Description=Heathrow Black Cabs Booking Server
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/var/www/heathrowblackcabs
+Environment="GMAIL_USER=YOUR_GMAIL@gmail.com"
+Environment="GMAIL_PASS=YOUR_APP_PASSWORD"
+ExecStart=/usr/bin/python3 /var/www/heathrowblackcabs/booking_server.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
