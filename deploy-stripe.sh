@@ -15,14 +15,15 @@ pip3 install -r requirements.txt
 
 # Create .env file if it doesn't exist
 if [ ! -f .env ]; then
-    echo "📝 Creating .env file..."
-    cat > .env << 'ENVEOF'
-IONOS_USER=info@heathrowblackcabs.co.uk
-IONOS_PASS=Yanbolu1973@
-STRIPE_SECRET_KEY=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
-ENVEOF
-    chmod 600 .env
-    echo "✅ .env file created"
+    echo "📝 .env file not found!"
+    echo "❌ Please create /var/www/heathrowblackcabs/.env with your credentials"
+    echo ""
+    echo "Example .env file:"
+    echo "IONOS_USER=info@heathrowblackcabs.co.uk"
+    echo "IONOS_PASS=your_password"
+    echo "STRIPE_SECRET_KEY=sk_live_your_key"
+    echo ""
+    exit 1
 fi
 
 # Update systemd service to load environment variables
