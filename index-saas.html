@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heathrow Black Cabs — Book Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCa8mBJ1eZw_FRUo0TGfwcNNcl7pt67ezI&libraries=places&callback=initMap" async defer></script>
+<style>
+:root{--gold:#c9a84c}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#000;color:#fff}
+
+header{
+  position:fixed;width:100%;padding:16px 30px;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(10px);
+  z-index:1000;display:flex;justify-content:space-between;align-items:center;
+  border-bottom:2px solid var(--gold)
+}
+header .brand{font-size:18px;font-weight:800;letter-spacing:2px;color:#fff}
+header .brand span{color:var(--gold)}
+header a{color:#fff;text-decoration:none;font-size:14px;font-weight:600}
+
+.hero{
+  height:100vh;
+  background:linear-gradient(rgba(0,0,0,.65),rgba(0,0,0,.9)),url('balckcab.jpg') center/cover;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:20px
+}
+.hero h1{font-size:clamp(32px,6vw,62px);font-weight:800;line-height:1.15;margin-bottom:16px}
+.hero h1 span{color:var(--gold)}
+.hero p{font-size:16px;color:#aaa;margin-bottom:32px;line-height:1.8}
+.hero-badges{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:32px}
+.hero-badge{border:1px solid #444;border-radius:4px;padding:6px 14px;font-size:11px;color:#ccc;text-transform:uppercase;letter-spacing:1px}
+
+.btn{
+  background:var(--gold);padding:16px 36px;border-radius:8px;
+  color:#fff;text-decoration:none;font-weight:700;border:none;
+  cursor:pointer;font-size:15px;letter-spacing:1px;text-transform:uppercase;
+  display:inline-block;transition:background 0.2s
+}
+.btn:hover{background:#0f2540}
+.btn-white{background:#fff;color:#000}
+.btn-white:hover{background:#eee}
+
+section{padding:80px 20px}
+
+.booking-section{background:#0a0a0a;padding:60px 20px}
+.booking-section h2{text-align:center;font-size:32px;font-weight:800;margin-bottom:8px}
+.booking-section p{text-align:center;color:#666;margin-bottom:40px}
+
+.booking-card{
+  background:#111;border-radius:16px;padding:36px;
+  max-width:780px;margin:0 auto;
+  border:1px solid #222;box-shadow:0 8px 40px rgba(0,0,0,.5)
+}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:1px}
+.form-group input,.form-group select{
+  padding:14px;background:#1a1a1a;border:1px solid #333;
+  color:#fff;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;
+  transition:border-color 0.2s
+}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--gold)}
+.form-group input::placeholder{color:#555}
+.form-group select option{background:#1a1a1a}
+
+#map{
+  height:200px;border-radius:10px;margin:16px 0;
+  border:1px solid #333;background:#1a1a1a;
+  display:flex;align-items:center;justify-content:center;color:#555;font-size:13px
+}
+
+.price-box{
+  background:#000;border:1px solid var(--gold);border-radius:10px;
+  padding:20px;margin:20px 0;text-align:center
+}
+.price-box .label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.price-box .amount{font-size:44px;font-weight:800;color:#fff}
+.price-box .breakdown{font-size:12px;color:#555;margin-top:8px}
+
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.btn-whatsapp{background:#25d366;color:#fff;padding:16px;border-radius:8px;text-align:center;text-decoration:none;font-weight:700;font-size:14px;display:block}
+.btn-stripe{background:var(--gold);color:#fff;padding:16px;border-radius:8px;text-align:center;font-weight:700;font-size:14px;border:none;cursor:pointer;width:100%}
+
+.payment-badges{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.payment-badge{background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:5px 12px;font-size:11px;color:#888}
+
+.features-section{background:#000;padding:80px 20px}
+.features-section h2{text-align:center;font-size:32px;font-weight:800;margin-bottom:8px}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;max-width:1100px;margin:40px auto 0}
+.feature-card{background:#111;border:1px solid #222;border-radius:12px;padding:28px 20px;text-align:center;transition:border-color 0.2s}
+.feature-card:hover{border-color:var(--gold)}
+.feature-icon{font-size:36px;margin-bottom:14px}
+.feature-card h3{font-size:15px;font-weight:700;margin-bottom:8px;color:#fff}
+.feature-card p{font-size:13px;color:#666;line-height:1.7}
+
+.airports-section{background:#0a0a0a;padding:80px 20px}
+.airports-section h2{text-align:center;font-size:32px;font-weight:800;margin-bottom:8px;color:#fff}
+.airports-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;max-width:900px;margin:40px auto 0}
+.airport-card{background:#111;border:1px solid #222;border-radius:10px;padding:20px;text-align:center;transition:border-color 0.2s}
+.airport-card:hover{border-color:var(--gold)}
+.airport-card h3{color:#fff;font-size:15px;margin-bottom:6px}
+.airport-card p{font-size:12px;color:#666}
+
+.pricing-section{background:#000;padding:80px 20px}
+.pricing-section h2{text-align:center;font-size:32px;font-weight:800;margin-bottom:8px}
+.pricing-table{max-width:640px;margin:40px auto 0;border:1px solid #222;border-radius:12px;overflow:hidden}
+.pricing-row{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #1a1a1a}
+.pricing-row:last-child{border-bottom:none}
+.pricing-row:nth-child(even){background:#0a0a0a}
+.pricing-row .item{font-size:14px;color:#aaa}
+.pricing-row .price{font-size:15px;font-weight:700;color:#fff}
+
+.fleet-section{background:#0a0a0a;padding:80px 20px}
+.fleet-section h2{text-align:center;font-size:32px;font-weight:800;margin-bottom:8px}
+.fleet-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:24px;max-width:1000px;margin:40px auto 0;align-items:center}
+.fleet-grid img{width:100%;height:260px;object-fit:cover;border-radius:10px;border:1px solid #222}
+.fleet-center{text-align:center;padding:0 20px}
+.fleet-center h3{font-size:20px;font-weight:700;margin-bottom:12px}
+.fleet-center p{font-size:13px;color:#666;margin-bottom:16px;line-height:1.7}
+.fleet-badge{display:inline-block;background:var(--gold);color:#fff;padding:6px 16px;border-radius:20px;font-size:11px;font-weight:700;margin:4px}
+
+.cta-section{background:#111;border-top:3px solid #c9a84c;padding:80px 20px;text-align:center}
+.cta-section h2{font-size:34px;font-weight:800;margin-bottom:12px}
+.cta-section p{color:rgba(255,255,255,0.7);margin-bottom:28px;font-size:16px}
+.cta-buttons{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+
+footer{background:#000;border-top:1px solid #1a1a1a;padding:40px 20px;text-align:center;color:#555;font-size:12px;line-height:2}
+footer a{color:#888;text-decoration:none}
+footer a:hover{color:#fff}
+
+.whatsapp-float{position:fixed;bottom:24px;right:24px;background:#25d366;color:#fff;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:999}
+
+@media(max-width:640px){
+  .form-row{grid-template-columns:1fr}
+  .btn-row{grid-template-columns:1fr}
+  .fleet-grid{grid-template-columns:1fr}
+  .fleet-grid img:last-child{display:none}
+  header .brand{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">HEATHROW <span>BLACK</span> CABS</div>
+  <div style="display:flex;gap:24px;align-items:center">
+    <a href="#booking">Book Now</a>
+    <a href="tel:07740304061" style="background:var(--gold);padding:8px 18px;border-radius:6px">&#128222; 07740304061</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <p style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:16px">London&#39;s Premier Taxi Service</p>
+    <h1>The World&#39;s Most Iconic<br><span>Black Cab</span></h1>
+    <p>TfL Licensed &middot; Fixed Prices &middot; All London Airports &middot; 24/7 Available<br>Flight Monitoring &middot; Meet &amp; Greet &middot; No Hidden Fees</p>
+    <div class="hero-badges">
+      <div class="hero-badge">&#10003; TfL Licensed</div>
+      <div class="hero-badge">&#10003; No Hidden Fees</div>
+      <div class="hero-badge">&#10003; Flight Monitoring</div>
+      <div class="hero-badge">&#10003; 5 &amp; 6 Seater</div>
+      <div class="hero-badge">&#10003; Cash &amp; Card</div>
+      <div class="hero-badge">&#9855; Wheelchair Ramp</div>
+    </div>
+    <a href="#booking" class="btn">Book Your Transfer</a>
+  </div>
+</div>
+
+<!-- BOOKING -->
+<div class="booking-section" id="booking">
+  <h2>Instant Quote &amp; Book</h2>
+  <p>Enter your journey details for a live price</p>
+  <div class="booking-card">
+    <div class="form-row">
+      <div class="form-group">
+        <label>&#128205; Pickup Location</label>
+        <select id="pickup" onchange="calcFromDropdown()">
+          <option value="">Select pickup location</option>
+          <optgroup label="&#9992; London Airports">
+            <option value="Heathrow Terminal 2">Heathrow — Terminal 2</option>
+            <option value="Heathrow Terminal 3">Heathrow — Terminal 3</option>
+            <option value="Heathrow Terminal 4">Heathrow — Terminal 4</option>
+            <option value="Heathrow Terminal 5">Heathrow — Terminal 5</option>
+            <option value="Gatwick North Terminal">Gatwick — North Terminal</option>
+            <option value="Gatwick South Terminal">Gatwick — South Terminal</option>
+            <option value="Stansted Airport">Stansted Airport</option>
+            <option value="Luton Airport">Luton Airport</option>
+            <option value="London City Airport">London City Airport</option>
+          </optgroup>
+          <optgroup label="&#128205; London Areas">
+            <option value="Central London">Central London</option>
+            <option value="West London">West London</option>
+            <option value="East London">East London</option>
+            <option value="North London">North London</option>
+            <option value="South London">South London</option>
+            <option value="Canary Wharf">Canary Wharf</option>
+            <option value="City of London">City of London</option>
+            <option value="Chelsea">Chelsea</option>
+            <option value="Kensington">Kensington</option>
+            <option value="Mayfair">Mayfair</option>
+            <option value="Paddington">Paddington</option>
+            <option value="Victoria">Victoria</option>
+            <option value="Waterloo">Waterloo</option>
+            <option value="Other">Other (specify in notes)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&#128205; Drop-off Location</label>
+        <select id="dropoff" onchange="calcFromDropdown()">
+          <option value="">Select drop-off location</option>
+          <optgroup label="&#9992; London Airports">
+            <option value="Heathrow Terminal 2">Heathrow — Terminal 2</option>
+            <option value="Heathrow Terminal 3">Heathrow — Terminal 3</option>
+            <option value="Heathrow Terminal 4">Heathrow — Terminal 4</option>
+            <option value="Heathrow Terminal 5">Heathrow — Terminal 5</option>
+            <option value="Gatwick North Terminal">Gatwick — North Terminal</option>
+            <option value="Gatwick South Terminal">Gatwick — South Terminal</option>
+            <option value="Stansted Airport">Stansted Airport</option>
+            <option value="Luton Airport">Luton Airport</option>
+            <option value="London City Airport">London City Airport</option>
+          </optgroup>
+          <optgroup label="&#128205; London Areas">
+            <option value="Central London">Central London</option>
+            <option value="West London">West London</option>
+            <option value="East London">East London</option>
+            <option value="North London">North London</option>
+            <option value="South London">South London</option>
+            <option value="Canary Wharf">Canary Wharf</option>
+            <option value="City of London">City of London</option>
+            <option value="Chelsea">Chelsea</option>
+            <option value="Kensington">Kensington</option>
+            <option value="Mayfair">Mayfair</option>
+            <option value="Paddington">Paddington</option>
+            <option value="Victoria">Victoria</option>
+            <option value="Waterloo">Waterloo</option>
+            <option value="Other">Other (specify in notes)</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>&#128197; Date</label>
+        <input type="date" id="journey-date" />
+      </div>
+      <div class="form-group">
+        <label>&#128336; Time</label>
+        <input type="time" id="journey-time" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>&#128101; Passengers</label>
+        <select id="passengers">
+          <option value="1">1 Passenger</option>
+          <option value="2">2 Passengers</option>
+          <option value="3">3 Passengers</option>
+          <option value="4">4 Passengers</option>
+          <option value="5">5 Passengers (Standard Cab)</option>
+          <option value="6">6 Passengers (Large Cab)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&#128748; Journey Type</label>
+        <select id="journey-type" onchange="calcFromDropdown()">
+          <option value="airport-pickup">Airport Pickup (to London)</option>
+          <option value="airport-dropoff">Airport Drop-off (from London)</option>
+          <option value="point-to-point">Point to Point</option>
+          <option value="hourly">Hourly Hire (£45/hr)</option>
+          <option value="tour-1hr">London Tour — 1 Hour (£55)</option>
+          <option value="tour-2hr">London Tour — 2 Hours (£100)</option>
+          <option value="tour-4hr">London Tour — 4 Hours (£180)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>&#9992; Airport (if applicable)</label>
+        <select id="airport">
+          <option value="">Select Airport</option>
+          <option value="heathrow">Heathrow (LHR)</option>
+          <option value="gatwick">Gatwick (LGW)</option>
+          <option value="stansted">Stansted (STN)</option>
+          <option value="luton">Luton (LTN)</option>
+          <option value="city">London City (LCY)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&#9992; Flight Number (optional)</label>
+        <input type="text" id="flight-number" placeholder="e.g. BA123" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>&#128100; Your Name</label>
+        <input type="text" id="customer-name" placeholder="Full name" />
+      </div>
+      <div class="form-group">
+        <label>&#128222; Phone</label>
+        <input type="tel" id="customer-phone" placeholder="Your phone number" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>&#128179; Payment Method</label>
+        <select id="payment-method">
+          <option value="cash">Cash</option>
+          <option value="card">Credit/Debit Card (in cab)</option>
+          <option value="stripe">Online Payment (Stripe)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&#127968; Postcode (optional)</label>
+        <input type="text" id="customer-postcode" placeholder="e.g. SW1A 1AA" />
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+      <label style="margin-bottom:10px;display:block">&#127775; Special Requests</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Child seat" style="width:auto;accent-color:#c9a84c"> &#128100; Child Seat</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Baby seat" style="width:auto;accent-color:#c9a84c"> &#128118; Baby Seat</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Wheelchair" style="width:auto;accent-color:#c9a84c"> &#9855; Wheelchair</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Extra luggage" style="width:auto;accent-color:#c9a84c"> &#129524; Extra Luggage</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Meet and greet" style="width:auto;accent-color:#c9a84c"> &#128075; Meet &amp; Greet</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Silent ride" style="width:auto;accent-color:#c9a84c"> &#128263; Silent Ride</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Pet friendly" style="width:auto;accent-color:#c9a84c"> &#128054; Pet Friendly</label>
+        <label style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:10px;cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;color:#aaa;font-weight:normal">
+          <input type="checkbox" name="special" value="Corporate receipt" style="width:auto;accent-color:#c9a84c"> &#129534; Corporate Receipt</label>
+      </div>
+      <input type="text" id="special-notes" placeholder="Any other requests or notes..." />
+    </div>
+
+    <div class="price-box">
+      <div class="label">Estimated Price</div>
+      <div class="amount" id="price-amount">&#163;0.00</div>
+      <div class="breakdown" id="price-breakdown">Select pickup &amp; drop-off for a price</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-stripe" onclick="stripeCheckout()">&#128179; Pay with Stripe</button>
+      <a id="whatsapp-btn" href="https://wa.me/447740304061" class="btn-whatsapp" target="_blank">&#128172; Book via WhatsApp</a>
+    </div>
+
+    <div class="payment-badges">
+      <div class="payment-badge">&#128179; Cash</div>
+      <div class="payment-badge">&#128179; Visa</div>
+      <div class="payment-badge">&#128179; Mastercard</div>
+      <div class="payment-badge">&#128179; Amex</div>
+      <div class="payment-badge">&#128179; Apple Pay</div>
+    </div>
+    <div id="booking-response" style="margin-top:16px;padding:12px;border-radius:8px;display:none;font-size:13px"></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="features-section">
+  <h2>Why Choose Us</h2>
+  <p style="text-align:center;color:#666;font-size:14px">The Heathrow Black Cabs Difference</p>
+  <div class="features-grid">
+    <div class="feature-card"><div class="feature-icon">&#127981;</div><h3>TfL Licensed</h3><p>All drivers hold full TfL black cab licences. The Knowledge of London guaranteed.</p></div>
+    <div class="feature-card"><div class="feature-icon">&#9992;</div><h3>Flight Monitoring</h3><p>We track your flight in real time. If delayed, your driver waits. First 30 mins free.</p></div>
+    <div class="feature-card"><div class="feature-icon">&#128176;</div><h3>No Hidden Fees</h3><p>Price includes everything. Base fare, mileage, airport fees. No surprises.</p></div>
+    <div class="feature-card"><div class="feature-icon">&#128336;</div><h3>24/7 Available</h3><p>Early morning flights, late night arrivals. Always available, 365 days a year.</p></div>
+    <div class="feature-card"><div class="feature-icon">&#9855;</div><h3>Wheelchair Accessible</h3><p>Every TX black cab has a built-in ramp. Full access, no extra charge.</p></div>
+    <div class="feature-card"><div class="feature-icon">&#128179;</div><h3>Multiple Payments</h3><p>Cash, card, Stripe, Apple Pay. Your choice.</p></div>
+  </div>
+</div>
+
+<!-- AIRPORTS -->
+<div class="airports-section" id="airports">
+  <h2>All London Airports</h2>
+  <p style="text-align:center;color:#666;font-size:14px">Coverage across every London airport</p>
+  <div class="airports-grid">
+    <div class="airport-card"><h3>&#9992; Heathrow</h3><p>Terminals 2, 3, 4 &amp; 5<br>LHR</p></div>
+    <div class="airport-card"><h3>&#9992; Gatwick</h3><p>North &amp; South Terminal<br>LGW</p></div>
+    <div class="airport-card"><h3>&#9992; Stansted</h3><p>Main Terminal<br>STN</p></div>
+    <div class="airport-card"><h3>&#9992; Luton</h3><p>Main Terminal<br>LTN</p></div>
+    <div class="airport-card"><h3>&#9992; London City</h3><p>Main Terminal<br>LCY</p></div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<div class="pricing-section" id="pricing">
+  <h2>Transparent Pricing</h2>
+  <p style="text-align:center;color:#666;font-size:14px">Clear, honest fares — no hidden fees</p>
+  <div class="pricing-table">
+    <div class="pricing-row"><span class="item">&#128663; Base Fare</span><span class="price">&#163;4.20</span></div>
+    <div class="pricing-row"><span class="item">&#128205; Per Mile</span><span class="price">&#163;5.00</span></div>
+    <div class="pricing-row"><span class="item">&#9992; Airport Drop-off Fee</span><span class="price">&#163;8.00</span></div>
+    <div class="pricing-row"><span class="item">&#9992; Airport Pickup Parking</span><span class="price">At Cost</span></div>
+    <div class="pricing-row"><span class="item">&#128336; Free Waiting Time</span><span class="price">30 Minutes</span></div>
+    <div class="pricing-row"><span class="item">&#128336; Waiting After 30 Mins</span><span class="price">&#163;35/hr</span></div>
+  </div>
+  <p style="text-align:center;margin-top:16px;font-size:12px;color:#555">All prices include VAT</p>
+</div>
+
+<!-- FLEET -->
+<div class="fleet-section" id="vehicles">
+  <h2>Our Fleet</h2>
+  <p style="text-align:center;color:#666;font-size:14px;margin-bottom:0">Iconic London TX Black Cabs</p>
+  <div class="fleet-grid">
+    <img src="balckcab.jpg" alt="Standard Black Cab">
+    <div class="fleet-center">
+      <h3>London TX Black Cab</h3>
+      <p>The world's most iconic taxi. Fully TfL licensed, wheelchair accessible, available 24/7.</p>
+      <div><span class="fleet-badge">Up to 5 Passengers</span></div>
+      <div><span class="fleet-badge">Up to 6 Passengers</span></div>
+      <a href="#booking" class="btn" style="margin-top:20px;display:inline-block">Book Now</a>
+    </div>
+    <img src="blackcab-front.jpg" alt="Large Black Cab">
+  </div>
+</div>
+
+<!-- TOURS -->
+<div style="background:#0a0a0a;padding:80px 20px;border-top:1px solid #222">
+  <h2 style="text-align:center;font-size:32px;font-weight:800;margin-bottom:8px">London Tours &amp; Hourly Hire</h2>
+  <p style="text-align:center;color:#666;font-size:14px;margin-bottom:40px">Explore London in the world&#39;s most iconic taxi</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:1100px;margin:0 auto">
+    <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;text-align:center;transition:border-color 0.2s" onmouseover="this.style.borderColor='#c9a84c'" onmouseout="this.style.borderColor='#222'">
+      <img src="blackcabs2.jpg" alt="City Tour" style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:8px;font-size:16px">1 Hour City Tour</h3>
+      <div style="font-size:30px;font-weight:800;color:#c9a84c;margin-bottom:8px">£55</div>
+      <p style="font-size:12px;color:#666;line-height:1.7">Big Ben, Westminster, Buckingham Palace, Tower Bridge.</p>
+      <a href="https://wa.me/447740304061?text=I'd like to book a 1 Hour City Tour" style="display:block;background:#c9a84c;color:#000;padding:10px;border-radius:6px;margin-top:14px;text-decoration:none;font-weight:700;font-size:13px">Book Now</a>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;text-align:center;transition:border-color 0.2s" onmouseover="this.style.borderColor='#c9a84c'" onmouseout="this.style.borderColor='#222'">
+      <img src="balckcab.jpg" alt="Grand Tour" style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:8px;font-size:16px">2 Hour Grand Tour</h3>
+      <div style="font-size:30px;font-weight:800;color:#c9a84c;margin-bottom:8px">£100</div>
+      <p style="font-size:12px;color:#666;line-height:1.7">Royal Parks, City, South Bank, Covent Garden &amp; more.</p>
+      <a href="https://wa.me/447740304061?text=I'd like to book a 2 Hour Grand Tour" style="display:block;background:#c9a84c;color:#000;padding:10px;border-radius:6px;margin-top:14px;text-decoration:none;font-weight:700;font-size:13px">Book Now</a>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;text-align:center;transition:border-color 0.2s" onmouseover="this.style.borderColor='#c9a84c'" onmouseout="this.style.borderColor='#222'">
+      <img src="blackcab-front.jpg" alt="Full Day Tour" style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:8px;font-size:16px">4 Hour Full Day</h3>
+      <div style="font-size:30px;font-weight:800;color:#c9a84c;margin-bottom:8px">£180</div>
+      <p style="font-size:12px;color:#666;line-height:1.7">Custom itinerary. Any London landmarks at your own pace.</p>
+      <a href="https://wa.me/447740304061?text=I'd like to book a 4 Hour Full Day Tour" style="display:block;background:#c9a84c;color:#000;padding:10px;border-radius:6px;margin-top:14px;text-decoration:none;font-weight:700;font-size:13px">Book Now</a>
+    </div>
+    <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px;text-align:center;transition:border-color 0.2s" onmouseover="this.style.borderColor='#c9a84c'" onmouseout="this.style.borderColor='#222'">
+      <div style="font-size:50px;margin-bottom:14px">&#128336;</div>
+      <h3 style="color:#fff;margin-bottom:8px;font-size:16px">Hourly Hire</h3>
+      <div style="font-size:30px;font-weight:800;color:#c9a84c;margin-bottom:8px">£45/hr</div>
+      <p style="font-size:12px;color:#666;line-height:1.7">Shopping, meetings, events or sightseeing. Minimum 1 hour.</p>
+      <a href="https://wa.me/447740304061?text=I'd like to hire a black cab by the hour" style="display:block;background:#c9a84c;color:#000;padding:10px;border-radius:6px;margin-top:14px;text-decoration:none;font-weight:700;font-size:13px">Book Now</a>
+    </div>
+  </div>
+</div>
+
+<!-- DISABLED ACCESS -->
+<div style="background:#000;padding:80px 20px;border-top:1px solid #222">
+  <div style="max-width:900px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center">
+    <div>
+      <h2 style="font-size:28px;font-weight:800;color:#fff;margin-bottom:16px">&#9855; Disabled Access — Every Black Cab</h2>
+      <p style="color:#888;font-size:14px;line-height:1.8;margin-bottom:16px">Every TX London Black Cab in our fleet is fully wheelchair accessible with a <strong style="color:#fff">built-in hydraulic ramp</strong>. No need to book a special vehicle — <strong style="color:#fff">all our cabs are accessible</strong>.</p>
+      <ul style="color:#888;font-size:14px;line-height:2.2;list-style:none;padding:0">
+        <li>&#10003; Built-in hydraulic ramp on every cab</li>
+        <li>&#10003; Spacious interior for wheelchairs</li>
+        <li>&#10003; No extra charge for wheelchair access</li>
+        <li>&#10003; Drivers trained in disability awareness</li>
+        <li>&#10003; All London airports covered</li>
+        <li>&#10003; 24/7 availability</li>
+      </ul>
+      <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+        <a href="tel:07740304061" style="background:#fff;color:#000;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">&#128222; Call to Book</a>
+        <a href="https://wa.me/447740304061?text=I need a wheelchair accessible black cab" style="background:#25d366;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">&#128172; WhatsApp</a>
+      </div>
+    </div>
+    <div style="background:#111;border:2px solid #c9a84c;border-radius:12px;padding:28px;text-align:center">
+      <img src="blackcab-front.jpg" alt="Wheelchair Accessible Black Cab" style="width:100%;border-radius:8px;margin-bottom:16px;object-fit:cover;height:180px">
+      <div style="font-size:48px;margin-bottom:12px">&#9855;</div>
+      <h3 style="font-size:18px;color:#fff;margin-bottom:10px">Wheelchair Accessible Taxi</h3>
+      <p style="font-size:13px;color:#888;line-height:1.7">Built-in ramp, wide doors, spacious interior. The world&#39;s most accessible taxi.</p>
+      <div style="margin-top:12px;font-size:12px;color:#c9a84c;font-weight:700">&#9855; All cabs accessible &middot; No extra charge</div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Ready to Book Your Black Cab?</h2>
+  <p>Call or WhatsApp for instant confirmation — 24/7</p>
+  <div class="cta-buttons">
+    <a href="tel:07740304061" class="btn btn-white">&#128222; Call 07740304061</a>
+    <a href="https://wa.me/447740304061" class="btn" style="background:#25d366">&#128172; WhatsApp</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>
+    <strong style="color:#fff">Heathrow Black Cabs</strong><br>
+    TfL Licensed Black Cab Airport Transfer Service &middot; All London Airports<br>
+    &#128222; <a href="tel:07740304061">07740304061</a> &middot;
+    &#128172; <a href="https://wa.me/447740304061">WhatsApp</a> &middot;
+    &#128231; <a href="mailto:info@heathrowblackcabs.co.uk">info@heathrowblackcabs.co.uk</a><br><br>
+    &copy; 2026 Heathrow Black Cabs. All rights reserved.
+  </p>
+  <div style="margin-top:24px;padding-top:20px;border-top:1px solid #1a1a1a;font-size:11px;color:#444;letter-spacing:1px">
+    DESIGNED &amp; BUILT BY <a href="https://hardinai.co.uk" target="_blank" rel="dofollow" style="color:#c9a84c;text-decoration:none;font-weight:600">HARDIN AI SOLUTIONS</a> &mdash; <a href="https://hardinai.co.uk" target="_blank" rel="dofollow" style="color:#555;text-decoration:none">AI Web Design &amp; Development London</a>
+  </div>
+</footer>
+
+<a href="https://wa.me/447740304061" class="whatsapp-float">&#128172;</a>
+
+<script>
+const BASE = 4.20, PER_MILE = 5.00, AIRPORT_FEE = 8.00, PARKING_FEE = 7.00;
+let lastPrice = 0;
+
+document.getElementById('journey-date').min = new Date().toISOString().split('T')[0];
+
+const locationDistances = {
+  "Central London":0,"West London":5,"East London":6,"North London":7,"South London":8,
+  "Canary Wharf":10,"City of London":8,"Chelsea":4,"Kensington":5,"Mayfair":3,
+  "Paddington":4,"Victoria":3,"Waterloo":4,
+  "Heathrow Terminal 2":15,"Heathrow Terminal 3":15,"Heathrow Terminal 4":16,"Heathrow Terminal 5":15,
+  "Gatwick North Terminal":28,"Gatwick South Terminal":28,
+  "Stansted Airport":35,"Luton Airport":32,"London City Airport":8
+};
+
+const airportNames = [
+  "Heathrow Terminal 2","Heathrow Terminal 3","Heathrow Terminal 4","Heathrow Terminal 5",
+  "Gatwick North Terminal","Gatwick South Terminal","Stansted Airport","Luton Airport","London City Airport"
+];
+
+const fixedPrices = {"hourly":45,"tour-1hr":55,"tour-2hr":100,"tour-4hr":180};
+
+function calcFromDropdown() {
+  const pickup = document.getElementById('pickup').value;
+  const dropoff = document.getElementById('dropoff').value;
+  const journeyType = document.getElementById('journey-type').value;
+
+  if (fixedPrices[journeyType]) {
+    lastPrice = fixedPrices[journeyType];
+    document.getElementById('price-amount').textContent = '£' + lastPrice.toFixed(2);
+    document.getElementById('price-breakdown').textContent = 'Fixed price for ' + journeyType.replace('-',' ');
+    updateWhatsApp();
+    return;
+  }
+
+  if (!pickup || !dropoff) return;
+
+  const pd = locationDistances[pickup] || 15;
+  const dd = locationDistances[dropoff] || 15;
+  const miles = Math.abs(pd - dd) || Math.max(pd, dd);
+  const pickupIsAirport = airportNames.includes(pickup);
+  const hasAirport = pickupIsAirport || airportNames.includes(dropoff);
+
+  lastPrice = BASE + (miles * PER_MILE) + (hasAirport ? AIRPORT_FEE : 0) + (pickupIsAirport ? PARKING_FEE : 0);
+  document.getElementById('price-amount').textContent = '£' + lastPrice.toFixed(2);
+  document.getElementById('price-breakdown').textContent =
+    'Base £' + BASE.toFixed(2) + ' + ~' + miles + ' miles × £' + PER_MILE.toFixed(2) +
+    (hasAirport ? ' + airport fee £' + AIRPORT_FEE.toFixed(2) : '') +
+    ' | 30 min free wait included';
+  updateWhatsApp();
+}
+
+function updateWhatsApp() {
+  const name = document.getElementById('customer-name').value || '';
+  const phone = document.getElementById('customer-phone').value || '';
+  const pickup = document.getElementById('pickup').value || '';
+  const dropoff = document.getElementById('dropoff').value || '';
+  const date = document.getElementById('journey-date').value || '';
+  const time = document.getElementById('journey-time').value || '';
+  const pax = document.getElementById('passengers').value;
+  const flight = document.getElementById('flight-number').value || '';
+  const payment = document.getElementById('payment-method').value || '';
+  const specials = [...document.querySelectorAll('input[name="special"]:checked')].map(c=>c.value).join(', ');
+  const notes = document.getElementById('special-notes').value || '';
+
+  const msg = encodeURIComponent(
+    'NEW BOOKING REQUEST\n' +
+    'Name: ' + name + '\nPhone: ' + phone +
+    '\nPickup: ' + pickup + '\nDrop-off: ' + dropoff +
+    '\nDate: ' + date + ' ' + time +
+    '\nPassengers: ' + pax +
+    (flight ? '\nFlight: ' + flight : '') +
+    '\nPayment: ' + payment +
+    (specials ? '\nSpecial: ' + specials : '') +
+    (notes ? '\nNotes: ' + notes : '') +
+    '\nEst. Price: £' + lastPrice.toFixed(2)
+  );
+  document.getElementById('whatsapp-btn').href = 'https://wa.me/447740304061?text=' + msg;
+}
+
+// Google Maps init (runs when API key added)
+let map, directionsService, directionsRenderer;
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat:51.5074,lng:-0.1278}, zoom:10,
+    styles:[{elementType:'geometry',stylers:[{color:'#1a1a1a'}]},{elementType:'labels.text.fill',stylers:[{color:'#aaa'}]}]
+  });
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer();
+  directionsRenderer.setMap(map);
+}
+
+// Stripe
+const stripe = Stripe('YOUR_STRIPE_PUBLIC_KEY');
+function stripeCheckout() {
+  const name = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+  const pickup = document.getElementById('pickup').value;
+  const dropoff = document.getElementById('dropoff').value;
+  const date = document.getElementById('journey-date').value;
+  const time = document.getElementById('journey-time').value;
+  const r = document.getElementById('booking-response');
+
+  if (!name || !phone || !pickup || !dropoff || !date || !time) {
+    r.style.display='block';r.style.background='#1a0000';r.style.border='1px solid #c9a84c';
+    r.style.color='#c9a84c';r.style.padding='12px';r.style.borderRadius='8px';
+    r.textContent='Please fill in all required fields first.';
+    return;
+  }
+  if (lastPrice === 0) {
+    r.style.display='block';r.style.background='#1a0000';r.style.border='1px solid #c9a84c';
+    r.style.color='#c9a84c';r.style.padding='12px';r.style.borderRadius='8px';
+    r.textContent='Please select pickup and drop-off to get a price.';
+    return;
+  }
+  // Stripe backend not yet configured — fall back to WhatsApp
+  updateWhatsApp();
+  document.getElementById('whatsapp-btn').click();
+}
+</script>
+</body>
+</html>
