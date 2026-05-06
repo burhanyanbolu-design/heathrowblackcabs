@@ -69,11 +69,13 @@ section{padding:80px 20px}
 .form-group input,.form-group select{
   padding:14px;background:#1a1a1a;border:1px solid #333;
   color:#fff;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;
-  transition:border-color 0.2s
+  transition:border-color 0.2s;color-scheme:dark
 }
 .form-group input:focus,.form-group select:focus{outline:none;border-color:var(--gold)}
 .form-group input::placeholder{color:#555}
 .form-group select option{background:#1a1a1a}
+.form-group input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
+.form-group input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
 
 #map{
   height:200px;border-radius:10px;margin:16px 0;
