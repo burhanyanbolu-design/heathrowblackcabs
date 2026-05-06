@@ -14,19 +14,38 @@ IONOS_PASS = os.environ.get('IONOS_PASS', 'Yanbolu1973@')
 BUSINESS_EMAIL = 'info@heathrowblackcabs.co.uk'
 
 def send_email(to, subject, html_body):
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = IONOS_USER
-    msg['To'] = to
-    msg.attach(MIMEText(html_body, 'html'))
-    with smtplib.SMTP_SSL('smtp.ionos.co.uk', 465) as server:
-        server.login(IONOS_USER, IONOS_PASS)
-        server.sendmail(IONOS_USER, to, msg.as_string())
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = IONOS_USER
+        msg['To'] = to
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Try SMTP_SSL on port 465
+        try:
+            with smtplib.SMTP_SSL('smtp.ionos.co.uk', 465, timeout=10) as server:
+                server.set_debuglevel(1)  # Enable debug output
+                server.login(IONOS_USER, IONOS_PASS)
+                server.sendmail(IONOS_USER, to, msg.as_string())
+                print(f"Email sent successfully to {to}")
+        except Exception as e:
+            print(f"SMTP_SSL failed: {e}, trying SMTP with STARTTLS...")
+            # Fallback to SMTP with STARTTLS on port 587
+            with smtplib.SMTP('smtp.ionos.co.uk', 587, timeout=10) as server:
+                server.set_debuglevel(1)
+                server.starttls()
+                server.login(IONOS_USER, IONOS_PASS)
+                server.sendmail(IONOS_USER, to, msg.as_string())
+                print(f"Email sent successfully to {to} via STARTTLS")
+    except Exception as e:
+        print(f"Failed to send email to {to}: {str(e)}")
+        raise
 
 @app.route('/book', methods=['POST'])
 def book():
     try:
         b = request.json
+        print(f"Received booking request: {b}")
 
         # --- Email to CUSTOMER ---
         customer_html = f"""
@@ -81,13 +100,38 @@ def book():
 
         # Send both emails
         customer_email = b.get('email')
+        email_errors = []
+        
         if customer_email:
-            send_email(customer_email, 'Booking Confirmation — Heathrow Black Cabs', customer_html)
-        send_email(BUSINESS_EMAIL, f"NEW BOOKING: {b.get('name')} — {b.get('date')} {b.get('time')}", business_html)
+            try:
+                send_email(customer_email, 'Booking Confirmation — Heathrow Black Cabs', customer_html)
+                print(f"Customer email sent to {customer_email}")
+            except Exception as e:
+                error_msg = f"Failed to send customer email: {str(e)}"
+                print(error_msg)
+                email_errors.append(error_msg)
+        
+        try:
+            send_email(BUSINESS_EMAIL, f"NEW BOOKING: {b.get('name')} — {b.get('date')} {b.get('time')}", business_html)
+            print(f"Business email sent to {BUSINESS_EMAIL}")
+        except Exception as e:
+            error_msg = f"Failed to send business email: {str(e)}"
+            print(error_msg)
+            email_errors.append(error_msg)
 
+        if email_errors:
+            return jsonify({
+                'status': 'partial', 
+                'message': 'Booking received but email delivery failed. Please contact us directly.',
+                'errors': email_errors
+            }), 200
+        
         return jsonify({'status': 'ok', 'message': 'Booking confirmed! Check your email.'})
 
     except Exception as e:
+        print(f"Booking error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
