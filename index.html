@@ -539,7 +539,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 const stripe = Stripe('pk_live_51TSSNbKf9iPJa4sIPR1gq47JdYb1rQCoJ8lyMMJzI0Qxo1Vy7vSJzsy8Ak7DmbEOPVbfG3YOS0NQtQHbugxBcByw00PSSiIwe0');
 let stripeElements, stripePaymentElement, currentBookingData;
 
-const BASE = 4.20, PER_MILE = 6.00, PARKING_FEE = 7.00;
+const BASE = 4.20, PER_MILE = 6.00;
 // Per-airport drop-off fees (11 Aug 2026) -- different airports charge
 // different amounts, replacing the single flat AIRPORT_FEE.
 const AIRPORT_DROPOFF_FEE = {
@@ -550,7 +550,7 @@ const AIRPORT_DROPOFF_FEE = {
   "London City Airport": 7.00
 };
 let lastPrice = 0;
-let lastBreakdown = { miles: 0, base: 0, mileCost: 0, airportFee: 0, airportLabel: '', parkingFee: 0 };
+let lastBreakdown = { miles: 0, base: 0, mileCost: 0, airportFee: 0, airportLabel: '' };
 
 document.getElementById('journey-date').min = new Date().toISOString().split('T')[0];
 
@@ -617,17 +617,17 @@ function calcFromDropdown() {
   // (covers the airport's own pickup/ranking charge). Drop-off TO an airport
   // charges that airport's fee too. If both ends are airports (rare), the
   // drop-off fee applies -- pickup parking fee still applies separately.
+  // One airport fee only, whichever end is the airport -- no separate
+  // pickup/parking fee stacked on top (fixed 11 Aug 2026, was double-charging).
   const airportFee = pickupIsAirport ? AIRPORT_DROPOFF_FEE[pickup] : (dropoffIsAirport ? AIRPORT_DROPOFF_FEE[dropoff] : 0);
   const airportLabel = pickupIsAirport ? pickup : (dropoffIsAirport ? dropoff : '');
   const mileCost = miles * PER_MILE;
-  const parkingFee = pickupIsAirport ? PARKING_FEE : 0;
-  lastPrice = BASE + mileCost + airportFee + parkingFee;
-  lastBreakdown = { miles, base: BASE, mileCost, airportFee, airportLabel, parkingFee };
+  lastPrice = BASE + mileCost + airportFee;
+  lastBreakdown = { miles, base: BASE, mileCost, airportFee, airportLabel };
   document.getElementById('price-amount').textContent = '£' + lastPrice.toFixed(2);
   document.getElementById('price-breakdown').textContent =
     'Base £' + BASE.toFixed(2) + ' + ~' + miles + ' miles × £' + PER_MILE.toFixed(2) +
     (airportFee > 0 ? ' + ' + airportLabel + ' fee £' + airportFee.toFixed(2) : '') +
-    (parkingFee > 0 ? ' + pickup fee £' + parkingFee.toFixed(2) : '') +
     ' | 30 min free wait included';
 }
 
@@ -733,7 +733,6 @@ async function showStripePayment(amount) {
     let breakdownHtml = 'Base fare: £' + bd.base.toFixed(2) + '<br>' +
       '~' + bd.miles + ' miles &times; £' + PER_MILE.toFixed(2) + '/mile: £' + bd.mileCost.toFixed(2);
     if (bd.airportFee > 0) breakdownHtml += '<br>' + bd.airportLabel + ' fee: £' + bd.airportFee.toFixed(2);
-    if (bd.parkingFee > 0) breakdownHtml += '<br>Airport pickup fee: £' + bd.parkingFee.toFixed(2);
     breakdownHtml += '<br><strong style="color:#c9a84c">Total: £' + amount.toFixed(2) + '</strong>';
     document.getElementById("stripe-fare-breakdown").innerHTML = breakdownHtml;
 
