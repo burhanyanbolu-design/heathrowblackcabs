@@ -102,7 +102,7 @@ def book():
           </div>
           <div style="background:#111;border:1px solid #333;border-radius:10px;padding:20px;text-align:center;margin-bottom:24px">
             <p style="color:#aaa;font-size:13px;margin-bottom:12px">Questions? Contact us directly:</p>
-            <a href="tel:07740304061" style="color:#c9a84c;text-decoration:none;font-weight:bold;font-size:16px">&#128222; 07740304061</a>
+            <a href="https://wa.me/447740304061" style="color:#25d366;text-decoration:none;font-weight:bold;font-size:16px">&#128172; WhatsApp us</a>
           </div>
           <p style="text-align:center;color:#555;font-size:11px">Heathrow Black Cabs &middot; TfL Licensed &middot; heathrowblackcabs.co.uk</p>
         </div>
