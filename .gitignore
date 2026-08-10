@@ -1,0 +1,13 @@
+# Contains live secrets in plaintext (IONOS email password, Stripe secret key
+# example values) -- never commit. Added 11 Aug 2026 after finding these were
+# untracked but also unprotected -- one git add -A away from being pushed.
+DEPLOYMENT_GUIDE.md
+SETUP_COMPLETE.md
+
+# Actual runtime secrets
+.env
+*.pem
+*.key
+
+# Local backups made during this session's edits -- not for the repo
+index.html.bak-*
