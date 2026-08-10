@@ -366,6 +366,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div style="background:#111;border:2px solid #c9a84c;border-radius:12px;padding:40px;max-width:500px;width:90%;position:relative">
         <button onclick="closeStripeModal()" style="position:absolute;top:15px;right:15px;background:none;border:none;font-size:28px;cursor:pointer;color:#888">&times;</button>
         <h3 style="color:#fff;margin-bottom:20px;text-align:center;font-size:24px">Complete Payment</h3>
+        <div id="stripe-fare-breakdown" style="background:#000;border:1px solid #222;border-radius:8px;padding:16px;margin-bottom:20px;font-size:13px;color:#ccc;line-height:1.8"></div>
         <div id="stripe-payment-element" style="margin-bottom:20px"></div>
         <button id="stripe-submit-btn" onclick="handleStripePayment()" style="background:#c9a84c;color:#000;padding:18px;border-radius:8px;font-weight:800;font-size:16px;border:none;cursor:pointer;width:100%;text-transform:uppercase;letter-spacing:1px">Pay £<span id="stripe-amount">0.00</span></button>
         <div id="stripe-error" style="color:#c9a84c;margin-top:12px;font-size:13px;display:none;text-align:center"></div>
@@ -538,18 +539,53 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 const stripe = Stripe('pk_live_51TSSNbKf9iPJa4sIPR1gq47JdYb1rQCoJ8lyMMJzI0Qxo1Vy7vSJzsy8Ak7DmbEOPVbfG3YOS0NQtQHbugxBcByw00PSSiIwe0');
 let stripeElements, stripePaymentElement, currentBookingData;
 
-const BASE = 4.20, PER_MILE = 5.00, AIRPORT_FEE = 8.00, PARKING_FEE = 7.00;
+const BASE = 4.20, PER_MILE = 6.00, PARKING_FEE = 7.00;
+// Per-airport drop-off fees (11 Aug 2026) -- different airports charge
+// different amounts, replacing the single flat AIRPORT_FEE.
+const AIRPORT_DROPOFF_FEE = {
+  "Heathrow Terminal 2": 7.00, "Heathrow Terminal 3": 7.00,
+  "Heathrow Terminal 4": 7.00, "Heathrow Terminal 5": 7.00,
+  "Gatwick North Terminal": 8.00, "Gatwick South Terminal": 8.00,
+  "Stansted Airport": 10.00, "Luton Airport": 8.00,
+  "London City Airport": 7.00
+};
 let lastPrice = 0;
+let lastBreakdown = { miles: 0, base: 0, mileCost: 0, airportFee: 0, airportLabel: '', parkingFee: 0 };
 
 document.getElementById('journey-date').min = new Date().toISOString().split('T')[0];
 
-const locationDistances = {
-  "Central London":0,"West London":5,"East London":6,"North London":7,"South London":8,
-  "Canary Wharf":10,"City of London":8,"Chelsea":4,"Kensington":5,"Mayfair":3,
-  "Paddington":4,"Victoria":3,"Waterloo":4,
-  "Heathrow Terminal 2":15,"Heathrow Terminal 3":15,"Heathrow Terminal 4":16,"Heathrow Terminal 5":15,
-  "Gatwick North Terminal":28,"Gatwick South Terminal":28,
-  "Stansted Airport":35,"Luton Airport":32,"London City Airport":8
+// Real coordinates (lat, lng) for each location. Distance between any two
+// points is calculated with the Haversine formula, not a fixed lookup table,
+// so every pair is correct -- not just the ones that happen to route through
+// Central London. FIX 11 Aug 2026: the previous model stored only each
+// location's straight-line distance FROM Central London and computed the
+// fare distance as the DIFFERENCE between those two numbers. That is only
+// correct when one endpoint IS Central London -- for any other pair (e.g.
+// Canary Wharf to Heathrow T5) it silently produced a much shorter distance
+// than the real journey, undercharging customers by a large margin.
+const locationCoords = {
+  "Central London":       [51.5074, -0.1278],
+  "West London":           [51.5090, -0.2200],
+  "East London":           [51.5450, -0.0150],
+  "North London":          [51.5700, -0.1000],
+  "South London":          [51.4614, -0.1367],  // Clapham
+  "Canary Wharf":          [51.5054, -0.0235],
+  "City of London":        [51.5155, -0.0922],
+  "Chelsea":               [51.4875, -0.1687],
+  "Kensington":            [51.4988, -0.1749],
+  "Mayfair":               [51.5090, -0.1490],
+  "Paddington":            [51.5154, -0.1755],
+  "Victoria":              [51.4952, -0.1441],
+  "Waterloo":              [51.5031, -0.1132],
+  "Heathrow Terminal 2":   [51.4700, -0.4543],
+  "Heathrow Terminal 3":   [51.4712, -0.4543],
+  "Heathrow Terminal 4":   [51.4592, -0.4467],
+  "Heathrow Terminal 5":   [51.4723, -0.4899],
+  "Gatwick North Terminal":[51.1568, -0.1608],
+  "Gatwick South Terminal":[51.1487, -0.1600],
+  "Stansted Airport":      [51.8860, 0.2389],
+  "Luton Airport":         [51.8747, -0.3683],
+  "London City Airport":   [51.5053, 0.0553]
 };
 
 const airportNames = [
@@ -557,20 +593,41 @@ const airportNames = [
   "Gatwick North Terminal","Gatwick South Terminal","Stansted Airport","Luton Airport","London City Airport"
 ];
 
+function haversineMiles(a, b) {
+  const R = 3958.8; // Earth radius in miles
+  const [lat1, lon1] = a, [lat2, lon2] = b;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const h = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
+}
+
 function calcFromDropdown() {
   const pickup = document.getElementById('pickup').value;
   const dropoff = document.getElementById('dropoff').value;
   if (!pickup || !dropoff) return;
-  const pd = locationDistances[pickup] || 15;
-  const dd = locationDistances[dropoff] || 15;
-  const miles = Math.abs(pd - dd) || Math.max(pd, dd);
+  const pc = locationCoords[pickup] || locationCoords["Central London"];
+  const dc = locationCoords[dropoff] || locationCoords["Central London"];
+  // Straight-line distance x 1.3 as a simple road-distance approximation
+  // (real driving distances run 20-40% longer than straight-line in London).
+  const miles = Math.round(haversineMiles(pc, dc) * 1.3 * 10) / 10 || 1;
   const pickupIsAirport = airportNames.includes(pickup);
-  const hasAirport = pickupIsAirport || airportNames.includes(dropoff);
-  lastPrice = BASE + (miles * PER_MILE) + (hasAirport ? AIRPORT_FEE : 0) + (pickupIsAirport ? PARKING_FEE : 0);
+  const dropoffIsAirport = airportNames.includes(dropoff);
+  // Pickup FROM an airport always charges that airport's fee automatically
+  // (covers the airport's own pickup/ranking charge). Drop-off TO an airport
+  // charges that airport's fee too. If both ends are airports (rare), the
+  // drop-off fee applies -- pickup parking fee still applies separately.
+  const airportFee = pickupIsAirport ? AIRPORT_DROPOFF_FEE[pickup] : (dropoffIsAirport ? AIRPORT_DROPOFF_FEE[dropoff] : 0);
+  const airportLabel = pickupIsAirport ? pickup : (dropoffIsAirport ? dropoff : '');
+  const mileCost = miles * PER_MILE;
+  const parkingFee = pickupIsAirport ? PARKING_FEE : 0;
+  lastPrice = BASE + mileCost + airportFee + parkingFee;
+  lastBreakdown = { miles, base: BASE, mileCost, airportFee, airportLabel, parkingFee };
   document.getElementById('price-amount').textContent = '£' + lastPrice.toFixed(2);
   document.getElementById('price-breakdown').textContent =
     'Base £' + BASE.toFixed(2) + ' + ~' + miles + ' miles × £' + PER_MILE.toFixed(2) +
-    (hasAirport ? ' + airport fee £' + AIRPORT_FEE.toFixed(2) : '') +
+    (airportFee > 0 ? ' + ' + airportLabel + ' fee £' + airportFee.toFixed(2) : '') +
+    (parkingFee > 0 ? ' + pickup fee £' + parkingFee.toFixed(2) : '') +
     ' | 30 min free wait included';
 }
 
@@ -672,6 +729,13 @@ async function showStripePayment(amount) {
     const { clientSecret } = await response.json();
     document.getElementById("stripe-modal").style.display = "flex";
     document.getElementById("stripe-amount").textContent = amount.toFixed(2);
+    const bd = lastBreakdown;
+    let breakdownHtml = 'Base fare: £' + bd.base.toFixed(2) + '<br>' +
+      '~' + bd.miles + ' miles &times; £' + PER_MILE.toFixed(2) + '/mile: £' + bd.mileCost.toFixed(2);
+    if (bd.airportFee > 0) breakdownHtml += '<br>' + bd.airportLabel + ' fee: £' + bd.airportFee.toFixed(2);
+    if (bd.parkingFee > 0) breakdownHtml += '<br>Airport pickup fee: £' + bd.parkingFee.toFixed(2);
+    breakdownHtml += '<br><strong style="color:#c9a84c">Total: £' + amount.toFixed(2) + '</strong>';
+    document.getElementById("stripe-fare-breakdown").innerHTML = breakdownHtml;
 
     stripeElements = stripe.elements({ clientSecret });
     stripePaymentElement = stripeElements.create('payment');
